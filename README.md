@@ -1,5 +1,6 @@
 # Elrond-staking-contract
-staking Contract
+staking Contract 
+Elrond blockchain - MultiversX network
 
 Contract address: erd1qqqqqqqqqqqqqpgqtpz4yht3ern76l8333h22rk95dj7pdk2f9dqpl3qjs
 
@@ -43,6 +44,6 @@ Clone the repo and go in the directory
     --function="unstake" \
     --arguments 500000`
     
-## Test localy 
+## Test locally 
 
   `cargo test --test rust_test`
