@@ -24,7 +24,7 @@ multiversx_sc_wasm_adapter::endpoints! {
         calculateRewardsForUser
         getStakedAddresses
         getStakingPosition
-        getApy
+        getBaseDistribution
     )
 }
 

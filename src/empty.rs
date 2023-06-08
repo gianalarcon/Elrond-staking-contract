@@ -1,10 +1,11 @@
 #![no_std]
 
+
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
 pub const BLOCKS_IN_YEAR: u64 = 60 * 60 * 24 * 365 / 6;
-pub const MAX_PERCENTAGE: u64 = 10_000;
+pub const MAX_PRECISION: u64 = 1_000_000; //1000000
 
 #[derive(TypeAbi, TopEncode, TopDecode, PartialEq, Debug)]
 pub struct StakingPosition<M: ManagedTypeApi> {
@@ -15,8 +16,8 @@ pub struct StakingPosition<M: ManagedTypeApi> {
 #[multiversx_sc::contract]
 pub trait StakingContract {
     #[init]
-    fn init(&self, apy: u64) {
-        self.apy().set(apy);
+    fn init(&self, base_distribution: u64) {
+        self.base_distribution().set(base_distribution);
     }
 
 		#[payable("EGLD")]
@@ -26,10 +27,10 @@ pub trait StakingContract {
         require!(payment_amount > 0, "Must pay more than 0");
 
         let caller = self.blockchain().get_caller();
-        let stake_mapper = self.staking_position(&caller);
+				let stake_mapper = self.staking_position(&caller);
 
-        let new_user = self.staked_addresses().insert(caller.clone());
-        let mut staking_pos = if !new_user {
+        let is_new_user = self.staked_addresses().insert(caller.clone());
+        let mut staking_pos = if !is_new_user {
             stake_mapper.get()
         } else {
             let current_block = self.blockchain().get_block_epoch();
@@ -110,10 +111,12 @@ pub trait StakingContract {
             return BigUint::zero();
         }
 
-        let apy = self.apy().get();
+        let base_distribution = self.base_distribution().get();
         let block_diff = current_block - staking_position.last_action_block;
+				let time_diff = block_diff * 6;
+				let second_per_year = BLOCKS_IN_YEAR * 6;
 
-        &staking_position.stake_amount * apy / MAX_PERCENTAGE * block_diff / BLOCKS_IN_YEAR
+        &staking_position.stake_amount * base_distribution / MAX_PRECISION * time_diff / second_per_year
     }
 
     #[view(calculateRewardsForUser)]
@@ -133,7 +136,7 @@ pub trait StakingContract {
         addr: &ManagedAddress,
     ) -> SingleValueMapper<StakingPosition<Self::Api>>;
 
-    #[view(getApy)]
-    #[storage_mapper("apy")]
-    fn apy(&self) -> SingleValueMapper<u64>;
+    #[view(getBaseDistribution)]
+    #[storage_mapper("baseDistribution")]
+    fn base_distribution(&self) -> SingleValueMapper<u64>;
 }

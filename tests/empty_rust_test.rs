@@ -6,7 +6,7 @@ use staking_contract::*;
 
 const WASM_PATH: &'static str = "output/staking-contract.wasm";
 const USER_BALANCE: u64 = 1_000_000_000_000_000_000;
-const APY: u64 = 1_000; // 10%
+const BASE_DISTRIBUTION: u64 = 300; // 0.000300
 
 struct ContractSetup<ContractObjBuilder>
 where
@@ -34,7 +34,7 @@ where
         // simulate deploy
         b_mock
             .execute_tx(&owner_address, &sc_wrapper, &rust_zero, |sc| {
-                sc.init(APY);
+                sc.init(BASE_DISTRIBUTION);
             })
             .assert_ok();
 
@@ -68,7 +68,7 @@ fn stake_unstake_test() {
             &rust_biguint!(USER_BALANCE),
             |sc| {
                 sc.stake();
-
+							//	println!("staking_position: {:?}", sc.staking_position(&managed_address!(&user_addr)).get());
                 assert_eq!(
                     sc.staking_position(&managed_address!(&user_addr)).get(),
                     StakingPosition {
@@ -97,12 +97,12 @@ fn stake_unstake_test() {
             &rust_biguint!(0),
             |sc| {
                 sc.unstake(OptionalValue::Some(managed_biguint!(USER_BALANCE / 2)));
-
+								//println!("unstake staking_position: {:?}", sc.staking_position(&managed_address!(&user_addr)).get());
                 assert_eq!(
                     sc.staking_position(&managed_address!(&user_addr)).get(),
                     StakingPosition {
                         stake_amount: managed_biguint!(USER_BALANCE / 2),
-                        last_action_block: 0
+												last_action_block: 0
                     }
                 );
             },
@@ -126,6 +126,7 @@ fn stake_unstake_test() {
             &rust_biguint!(0),
             |sc| {
                 sc.unstake(OptionalValue::None);
+							//	println!("unstake full staking_position: {:?}", sc.staking_position(&managed_address!(&user_addr)).get());
 
                 assert!(sc
                     .staking_position(&managed_address!(&user_addr))
@@ -156,6 +157,7 @@ fn rewards_test() {
             &rust_biguint!(USER_BALANCE),
             |sc| {
                 sc.stake();
+							//	println!("staking_position: {:?}", sc.staking_position(&managed_address!(&user_addr)).get());
 
                 assert_eq!(
                     sc.staking_position(&managed_address!(&user_addr)).get(),
@@ -175,7 +177,7 @@ fn rewards_test() {
         .b_mock
         .execute_query(&setup.contract_wrapper, |sc| {
             let actual_rewards = sc.calculate_rewards_for_user(managed_address!(&user_addr));
-            let expected_rewards = managed_biguint!(USER_BALANCE) * APY / MAX_PERCENTAGE;
+            let expected_rewards = managed_biguint!(USER_BALANCE) * BASE_DISTRIBUTION / MAX_PRECISION;
             assert_eq!(actual_rewards, expected_rewards);
         })
         .assert_ok();
@@ -211,7 +213,7 @@ fn rewards_test() {
 
     setup.b_mock.check_egld_balance(
         &user_addr,
-        &(rust_biguint!(USER_BALANCE) * APY / MAX_PERCENTAGE),
+        &(rust_biguint!(USER_BALANCE) * BASE_DISTRIBUTION / MAX_PRECISION),
     );
 
     // query rewards after claim
