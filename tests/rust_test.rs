@@ -68,12 +68,12 @@ fn stake_unstake_test() {
             &rust_biguint!(USER_BALANCE),
             |sc| {
                 sc.stake();
-							//	println!("staking_position: {:?}", sc.staking_position(&managed_address!(&user_addr)).get());
+                //	println!("staking_position: {:?}", sc.staking_position(&managed_address!(&user_addr)).get());
                 assert_eq!(
                     sc.staking_position(&managed_address!(&user_addr)).get(),
                     StakingPosition {
                         stake_amount: managed_biguint!(USER_BALANCE),
-                        last_action_block: 0
+                        last_action_block_timestamp: 0
                     }
                 );
             },
@@ -97,12 +97,12 @@ fn stake_unstake_test() {
             &rust_biguint!(0),
             |sc| {
                 sc.unstake(OptionalValue::Some(managed_biguint!(USER_BALANCE / 2)));
-								//println!("unstake staking_position: {:?}", sc.staking_position(&managed_address!(&user_addr)).get());
+                //println!("unstake staking_position: {:?}", sc.staking_position(&managed_address!(&user_addr)).get());
                 assert_eq!(
                     sc.staking_position(&managed_address!(&user_addr)).get(),
                     StakingPosition {
                         stake_amount: managed_biguint!(USER_BALANCE / 2),
-												last_action_block: 0
+                        last_action_block_timestamp: 0
                     }
                 );
             },
@@ -126,7 +126,7 @@ fn stake_unstake_test() {
             &rust_biguint!(0),
             |sc| {
                 sc.unstake(OptionalValue::None);
-							//	println!("unstake full staking_position: {:?}", sc.staking_position(&managed_address!(&user_addr)).get());
+                //	println!("unstake full staking_position: {:?}", sc.staking_position(&managed_address!(&user_addr)).get());
 
                 assert!(sc
                     .staking_position(&managed_address!(&user_addr))
@@ -157,27 +157,28 @@ fn rewards_test() {
             &rust_biguint!(USER_BALANCE),
             |sc| {
                 sc.stake();
-							//	println!("staking_position: {:?}", sc.staking_position(&managed_address!(&user_addr)).get());
+                //	println!("staking_position: {:?}", sc.staking_position(&managed_address!(&user_addr)).get());
 
                 assert_eq!(
                     sc.staking_position(&managed_address!(&user_addr)).get(),
                     StakingPosition {
                         stake_amount: managed_biguint!(USER_BALANCE),
-                        last_action_block: 0
+                        last_action_block_timestamp: 0
                     }
                 );
             },
         )
         .assert_ok();
 
-    setup.b_mock.set_block_nonce(BLOCKS_IN_YEAR);
+    setup.b_mock.set_block_nonce(SECONDS_IN_YEAR);
 
     // query rewards
     setup
         .b_mock
         .execute_query(&setup.contract_wrapper, |sc| {
             let actual_rewards = sc.calculate_rewards_for_user(managed_address!(&user_addr));
-            let expected_rewards = managed_biguint!(USER_BALANCE) * BASE_DISTRIBUTION / MAX_PRECISION;
+            let expected_rewards =
+                managed_biguint!(USER_BALANCE) * BASE_DISTRIBUTION / MAX_PRECISION;
             assert_eq!(actual_rewards, expected_rewards);
         })
         .assert_ok();
@@ -194,7 +195,7 @@ fn rewards_test() {
                     sc.staking_position(&managed_address!(&user_addr)).get(),
                     StakingPosition {
                         stake_amount: managed_biguint!(USER_BALANCE),
-                        last_action_block: 0
+                        last_action_block_timestamp: 0
                     }
                 );
 
@@ -204,7 +205,7 @@ fn rewards_test() {
                     sc.staking_position(&managed_address!(&user_addr)).get(),
                     StakingPosition {
                         stake_amount: managed_biguint!(USER_BALANCE),
-                        last_action_block: BLOCKS_IN_YEAR
+                        last_action_block_timestamp: SECONDS_IN_YEAR
                     }
                 );
             },

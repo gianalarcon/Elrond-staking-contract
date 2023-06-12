@@ -1,16 +1,15 @@
 #![no_std]
 
-
 multiversx_sc::imports!();
 multiversx_sc::derive_imports!();
 
-pub const BLOCKS_IN_YEAR: u64 = 60 * 60 * 24 * 365 / 6;
+pub const SECONDS_IN_YEAR: u64 = 60 * 60 * 24 * 365;
 pub const MAX_PRECISION: u64 = 1_000_000; //1000000
 
-#[derive(TypeAbi, TopEncode, TopDecode, PartialEq, Debug)]
+#[derive(NestedEncode, NestedDecode, TypeAbi, TopEncode, TopDecode, PartialEq, Debug)]
 pub struct StakingPosition<M: ManagedTypeApi> {
     pub stake_amount: BigUint<M>,
-    pub last_action_block: u64,
+    pub last_action_block_timestamp: u64,
 }
 
 #[multiversx_sc::contract]
@@ -20,23 +19,23 @@ pub trait StakingContract {
         self.base_distribution().set(base_distribution);
     }
 
-		#[payable("EGLD")]
+    #[payable("EGLD")]
     #[endpoint]
     fn stake(&self) {
         let payment_amount = self.call_value().egld_value().clone_value();
         require!(payment_amount > 0, "Must pay more than 0");
 
         let caller = self.blockchain().get_caller();
-				let stake_mapper = self.staking_position(&caller);
+        let stake_mapper = self.staking_position(&caller);
 
         let is_new_user = self.staked_addresses().insert(caller.clone());
         let mut staking_pos = if !is_new_user {
             stake_mapper.get()
         } else {
-            let current_block = self.blockchain().get_block_epoch();
+            let current_block_timestamp = self.blockchain().get_block_timestamp();
             StakingPosition {
                 stake_amount: BigUint::zero(),
-                last_action_block: current_block,
+                last_action_block_timestamp: current_block_timestamp,
             }
         };
 
@@ -97,8 +96,8 @@ pub trait StakingContract {
         staking_pos: &mut StakingPosition<Self::Api>,
     ) {
         let reward_amount = self.calculate_rewards(staking_pos);
-        let current_block = self.blockchain().get_block_nonce();
-        staking_pos.last_action_block = current_block;
+        let current_block_timestamp = self.blockchain().get_block_timestamp();
+        staking_pos.last_action_block_timestamp = current_block_timestamp;
 
         if reward_amount > 0 {
             self.send().direct_egld(user, &reward_amount);
@@ -106,17 +105,16 @@ pub trait StakingContract {
     }
 
     fn calculate_rewards(&self, staking_position: &StakingPosition<Self::Api>) -> BigUint {
-        let current_block = self.blockchain().get_block_nonce();
-        if current_block <= staking_position.last_action_block {
+        let current_block_timestamp = self.blockchain().get_block_timestamp();
+        if current_block_timestamp <= staking_position.last_action_block_timestamp {
             return BigUint::zero();
         }
 
         let base_distribution = self.base_distribution().get();
-        let block_diff = current_block - staking_position.last_action_block;
-				let time_diff = block_diff * 6;
-				let second_per_year = BLOCKS_IN_YEAR * 6;
+        let time_diff = current_block_timestamp - staking_position.last_action_block_timestamp;
 
-        &staking_position.stake_amount * base_distribution / MAX_PRECISION * time_diff / second_per_year
+        &staking_position.stake_amount * base_distribution / MAX_PRECISION * time_diff
+            / SECONDS_IN_YEAR
     }
 
     #[view(calculateRewardsForUser)]
